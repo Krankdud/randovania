@@ -315,6 +315,7 @@ _MIGRATIONS = [
     _migrate_v20,
     _migrate_v21,
     _migrate_v22,
+    lambda it: it,  # add RequirementReference
 ]
 CURRENT_VERSION = migration_lib.get_version(_MIGRATIONS)
 
