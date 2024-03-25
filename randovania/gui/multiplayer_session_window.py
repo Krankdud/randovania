@@ -268,6 +268,7 @@ class MultiplayerSessionWindow(QtWidgets.QMainWindow, Ui_MultiplayerSessionWindo
         # Signals
         self.users_widget.GameExportRequested.connect(self.game_export_listener)
         self.users_widget.TrackWorldRequested.connect(self.track_world_listener)
+        self.users_widget.ReleaseWorldRequested.connect(self.release_world_listener)
         self.network_client.MultiplayerSessionMetaUpdated.connect(self.on_meta_update)
         self.network_client.MultiplayerSessionActionsUpdated.connect(self.on_actions_update)
         self.network_client.MultiplayerAuditLogUpdated.connect(self.on_audit_log_update)
@@ -1110,3 +1111,24 @@ class MultiplayerSessionWindow(QtWidgets.QMainWindow, Ui_MultiplayerSessionWindo
 
         self.tracker_windows[(world_uid, user_id)] = tracker_window
         await self.network_client.world_track_inventory(world_uid, user_id, True)
+
+    @asyncSlot()
+    @handle_network_errors
+    async def release_world_listener(self, world_uid: uuid.UUID):
+        description = await self.game_session_api.request_layout_description(self._session.worlds)
+        all_patches = description.all_patches
+
+        patches = None
+        for i in range(len(self._session.worlds)):
+            if self._session.worlds[i].id == world_uid:
+                patches = all_patches[i]
+                break
+
+        if patches is None:
+            return
+
+        item_indices: set[int] = {p.index for p in patches.pickup_assignment}
+
+        data = self._multiworld_client.database.get_data_for(world_uid)
+        await self._multiworld_client.database.set_data_for(world_uid, data.extend_collected_location(item_indices))
+        self._multiworld_client.start_server_sync_task()
