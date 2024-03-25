@@ -90,6 +90,7 @@ class WorldWidgetEntry:
 class MultiplayerSessionUsersWidget(QtWidgets.QTreeWidget):
     GameExportRequested = Signal(uuid.UUID, dict)
     TrackWorldRequested = Signal(uuid.UUID, int)
+    ReleaseWorldRequested = Signal(uuid.UUID)
 
     _last_session: MultiplayerSessionEntry | None = None
     _session: MultiplayerSessionEntry
@@ -311,6 +312,9 @@ class MultiplayerSessionUsersWidget(QtWidgets.QTreeWidget):
     def _watch_inventory(self, world_uid: uuid.UUID, user_id: int):
         self.TrackWorldRequested.emit(world_uid, user_id)
 
+    def _release_items(self, world_uid: uuid.UUID):
+        self.ReleaseWorldRequested.emit(world_uid)
+
     #
     def is_admin(self) -> bool:
         return self._session.users[self.your_id].admin
@@ -379,6 +383,10 @@ class MultiplayerSessionUsersWidget(QtWidgets.QTreeWidget):
         if owner is not None:
             world_menu.addSeparator()
             connect_to(world_menu.addAction("Watch inventory"), self._watch_inventory, world_id, owner)
+
+        if owner == self.your_id or self.is_admin():
+            world_menu.addSeparator()
+            connect_to(world_menu.addAction("Release items"), self._release_items, world_id)
 
         world_tool.setMenu(world_menu)
 
